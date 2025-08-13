@@ -112,21 +112,34 @@ namespace AquaSort.Api.Controllers
             }
         }
 
-        [HttpPut("atender/{id}")]
-        public async Task<IActionResult> MarcarComoAtendido(int id)
+       [HttpPut("atender/{id}")]
+public IActionResult MarcarComoAtendido(int id)
+{
+    try
+    {
+        string connectionString = _configuration.GetConnectionString("DefaultConnection");
+
+        using (var connection = new SqlConnection(connectionString))
         {
-            var solicitud = await _context.Solicitudes.FindAsync(id);
+            connection.Open();
 
-            if (solicitud == null)
-            {
+            var command = new SqlCommand("UPDATE Solicitudes SET Estado = 'Atendido' WHERE Id = @Id", connection);
+            command.Parameters.AddWithValue("@Id", id);
+
+            int rowsAffected = command.ExecuteNonQuery();
+
+            if (rowsAffected == 0)
                 return NotFound();
-            }
-
-            solicitud.Estado = "Atendido";
-            await _context.SaveChangesAsync();
 
             return Ok(new { mensaje = "Solicitud marcada como atendida" });
         }
+    }
+    catch (Exception ex)
+    {
+        return StatusCode(500, $"Error al marcar como atendida: {ex.Message}");
+    }
+}
+
 
     }
 }
