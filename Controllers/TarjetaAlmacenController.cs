@@ -17,51 +17,95 @@ namespace AquaSort.Api.Controllers
             _configuration = configuration;
         }
 
-        [HttpGet("producto/{productoId}")]
-        public IActionResult GetEstadisticaProducto(int productoId)
+       [HttpGet("producto/{productoId}")]
+public IActionResult GetMovimientos(int productoId)
+{
+    try
+    {
+        string connectionString = _configuration.GetConnectionString("DefaultConnection");
+        var movimientos = new List<object>();
+
+        using (var connection = new SqlConnection(connectionString))
         {
-            try
+            connection.Open();
+            string sql = @"SELECT IdMovimiento, Fecha, Entrada, Salida, Costo 
+                           FROM TarjetaAlmacen 
+                           WHERE ProductoId = @ProductoId 
+                           ORDER BY Fecha";
+
+            using (var command = new SqlCommand(sql, connection))
             {
-                string connectionString = _configuration.GetConnectionString("DefaultConnection");
-
-                var movimientos = new List<object>();
-
-                using (var connection = new SqlConnection(connectionString))
+                command.Parameters.AddWithValue("@ProductoId", productoId);
+                using (var reader = command.ExecuteReader())
                 {
-                    connection.Open();
-                    string sql = @"
-                        SELECT IdMovimiento, Fecha, Entrada, Salida, Costo
-                        FROM TarjetaAlmacen
-                        WHERE ProductoId = @ProductoId
-                        ORDER BY Fecha";
-
-                    using (var command = new SqlCommand(sql, connection))
+                    while (reader.Read())
                     {
-                        command.Parameters.AddWithValue("@ProductoId", productoId);
-
-                        using (var reader = command.ExecuteReader())
+                        movimientos.Add(new
                         {
-                            while (reader.Read())
-                            {
-                                movimientos.Add(new
-                                {
-                                    IdMovimiento = reader.GetInt32(0),
-                                    Fecha = reader.GetDateTime(1),
-                                    Entrada = reader.GetInt32(2),
-                                    Salida = reader.GetInt32(3),
-                                    Costo = reader.GetDecimal(4)
-                                });
-                            }
-                        }
+                            IdMovimiento = reader.GetInt32(0),
+                            Fecha = reader.GetDateTime(1),
+                            Entrada = reader.GetInt32(2),
+                            Salida = reader.GetInt32(3),
+                            Costo = reader.GetDecimal(4)
+                        });
                     }
                 }
-
-                return Ok(movimientos);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Error al obtener movimientos: {ex.Message}");
             }
         }
+
+        return Ok(movimientos);
     }
+    catch (Exception ex)
+    {
+        return StatusCode(500, $"Error: {ex.Message}");
+    }
+}
+[HttpPut("{id}")]
+public IActionResult ActualizarMovimiento(int id, [FromBody] MovimientoDto mov)
+{
+    try
+    {
+        string connectionString = _configuration.GetConnectionString("DefaultConnection");
+
+        using (var connection = new SqlConnection(connectionString))
+        {
+            connection.Open();
+            string sql = @"
+                UPDATE TarjetaAlmacen
+                SET Entrada = @Entrada,
+                    Salida = @Salida,
+                    Costo = @Costo
+                WHERE IdMovimiento = @Id";
+
+            using (var command = new SqlCommand(sql, connection))
+            {
+                command.Parameters.AddWithValue("@Entrada", mov.Entrada);
+                command.Parameters.AddWithValue("@Salida", mov.Salida);
+                command.Parameters.AddWithValue("@Costo", mov.Costo);
+                command.Parameters.AddWithValue("@Id", id);
+
+                int rows = command.ExecuteNonQuery();
+                if (rows == 0) return NotFound("Movimiento no encontrado");
+            }
+        }
+
+        return Ok();
+    }
+    catch (Exception ex)
+    {
+        return StatusCode(500, $"Error al actualizar movimiento: {ex.Message}");
+    }
+}
+
+public class MovimientoDto
+{
+    public int Entrada { get; set; }
+    public int Salida { get; set; }
+    public decimal Costo { get; set; }
+}
+
+
+    }
+
+    
 }

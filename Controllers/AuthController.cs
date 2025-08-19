@@ -34,7 +34,7 @@ namespace AquaSort.Controllers
             HttpContext.Session.SetString("UserId", user.id.ToString());
             HttpContext.Session.SetString("Username", user.usuario);
 
-            return Ok(new { message = "Inicio de sesión exitoso", user = new { user.id, user.usuario } });
+        return Ok(new { message = "Inicio de sesión exitoso", user = new { user.id, user.usuario, Rol = user.Rol } });
         }
 
         private string Sha256(string password)
@@ -73,7 +73,8 @@ public IActionResult Register([FromBody] RegisterDto newUser)
     {
         usuario = newUser.Username,
         email = newUser.Email,
-        contraseña = Sha256(newUser.Password)
+        contraseña = Sha256(newUser.Password),
+        Rol = 2
     };
 
     _context.Usuarios.Add(usuario);
